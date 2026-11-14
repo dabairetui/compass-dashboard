@@ -1,4 +1,4 @@
-<title>小小白·罗盘系统</title>
+<title>小小白·模拟账户</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* 布局：单列控制台。顶部状态条 → 四账户卡片 → 运行记录 → 历史回放（明确标注非正式业绩） */
@@ -46,9 +46,16 @@ svg{width:100%;height:auto;display:block}
 .legend i{display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle}
 details summary{cursor:pointer;color:var(--accent);font-size:.85rem}
 .note{border-left:3px solid var(--warn);padding:6px 10px;background:var(--surface);font-size:.82rem}
+.tabs{max-width:760px;margin:0 auto 14px;display:flex;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:6px}
+.tabs a{flex:1;text-align:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-decoration:none;font-weight:600;font-size:.9rem}
+.tabs a[aria-current="page"]{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+.md p{margin:0 0 6px}.md ul{margin:0;padding-left:18px}.md li{margin:2px 0;font-size:.85rem}
 </style>
+<nav class="tabs" aria-label="账户切换"><a href="#" data-view="app">四账户（罗盘）</a><a href="#vcp" data-view="vcp">VCP 突破</a></nav>
 <div class="wrap" id="app"><h1>小小白·罗盘系统</h1><p class="muted">正在读取账本数据……</p></div>
+<div class="wrap" id="vcp" hidden><h1>小小白·VCP突破模拟账户</h1><p class="muted">正在读取账本数据……</p></div>
 <script src="data/dashboard.js"></script>
+<script src="data/vcp.js"></script>
 <script>
 (function(){
 const $=(h)=>{const d=document.createElement("div");d.innerHTML=h;return d.firstElementChild};
@@ -125,5 +132,50 @@ if(D.replay&&D.replay.accounts){
   html+='<section class="card"><h2>历史回放（非正式业绩）</h2><div class="note">这是用过去的月末价格把同一套规则重走一遍，用来了解规则的脾气。规则是在看过这段历史之后才定下的，所以结果必然偏乐观，不能当作未来收益的依据。正式业绩只看上面的账户。</div><div class="tw"><table><tr><th>账户</th><th>区间</th><th>策略</th><th>回撤</th><th>对照</th><th>回撤</th><th>基准</th><th>回撤</th></tr>'+Object.values(R).map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.start+'→'+r.end+'</td><td class="'+cls(r.strategy.total)+'">'+pct(r.strategy.total,1)+'</td><td>'+(r.strategy.mdd*100).toFixed(1)+'%</td><td class="'+cls(r.control.total)+'">'+pct(r.control.total,1)+'</td><td>'+(r.control.mdd*100).toFixed(1)+'%</td><td class="'+cls(r.benchmark.total)+'">'+pct(r.benchmark.total,1)+'</td><td>'+(r.benchmark.mdd*100).toFixed(1)+'%</td></tr>').join("")+'</table></div><p class="muted small">回放简化：月末收盘价换仓，不含月内止损/降档/回撤刹车。</p></section>';
 }
 app.replaceChildren(...$("<div>"+html+"</div>").children);
+})();
+</script>
+<script>
+(function(){
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const f2=(x)=>Number(x).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=(x,d=2)=>(x>=0?"+":"")+(x*100).toFixed(d)+"%";
+const cls=(x)=>x>0?"pos":x<0?"neg":"";
+function md(t){let h="",inT=false,inL=false;for(const l of String(t||"").split("\n")){
+  if(/^\|/.test(l)){if(/^\|[-| ]+\|$/.test(l))continue;const c=l.split("|").slice(1,-1).map(x=>esc(x.trim()));if(inL){h+="</ul>";inL=false}h+=(inT?"":'<div class="tw"><table>')+"<tr>"+c.map(x=>"<td>"+x+"</td>").join("")+"</tr>";inT=true;continue}
+  if(inT){h+="</table></div>";inT=false}
+  const e=esc(l).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+  if(/^- /.test(l)){if(!inL){h+="<ul>";inL=true}h+="<li>"+e.slice(2)+"</li>";continue}
+  if(inL){h+="</ul>";inL=false}
+  if(/^## /.test(l))continue;else if(l.trim())h+="<p>"+e+"</p>"}
+  return h+(inT?"</table></div>":"")+(inL?"</ul>":"")}
+function chart(nav){
+  if(nav.length<2)return '<p class="muted small">净值曲线至少要两个交易日才能画出。</p>';
+  const a=nav.map(r=>100*(1+ +r.ret)),b=nav.map(r=>100*(1+ +r.bench_ret)),all=a.concat(b);
+  const lo=Math.min(...all)-0.5,hi=Math.max(...all)+0.5,W=640,H=190,L=44,R=10,T=10,B=22,n=a.length-1;
+  const x=i=>L+(W-L-R)*i/n,y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const pl=s=>s.map((v,i)=>x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
+  let g="";for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3;g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+v.toFixed(1)+'</text>'}
+  g+='<text x="'+L+'" y="'+(H-5)+'" font-size="11" fill="var(--muted)">'+nav[0].date+'</text><text x="'+(W-R)+'" y="'+(H-5)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+nav[n].date+'</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="账户净值与沪深300ETF对比" style="width:100%;height:auto">'+g+'<polyline fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" points="'+pl(b)+'"/><polyline fill="none" stroke="var(--accent)" stroke-width="2.2" points="'+pl(a)+'"/></svg><div class="legend"><span style="color:var(--accent)">━ 账户</span><span>┅ 沪深300ETF</span><span>起点＝100</span></div>'}
+const el=document.getElementById("vcp"),V=window.VCP;
+if(!V||!V.state){el.innerHTML='<h1>小小白·VCP突破模拟账户</h1><div class="bar"><span class="pill warn">暂无数据</span><span>Mac 上的 VCP 账户还没有运行过，或数据文件尚未上传。</span></div>';}
+else{
+const s=V.state,nav=V.nav||[],last=nav[nav.length-1]||{},r=+last.ret||0,br=+last.bench_ret||0,dd=+last.dd||0,nv=last.nav?+last.nav:+s.cash;
+const runs=V.runs||[],lr=runs[runs.length-1];
+const st={ok:"成功",idle:"非交易日/未更新",failed:"失败"};
+let h='<div><h1>小小白·VCP突破模拟账户</h1><p class="muted small">全部为模拟交易，不连接券商。A股个股突破策略，初始 '+f2(V.initial_cash)+' 元 · 规则 '+esc(V.rules_version||"")+'</p></div>';
+h+='<div class="bar"><span>结算至 <b>'+esc(s.last_settled||"—")+'</b></span><span>计划冻结于 '+esc(s.plan&&s.plan.frozen_at||"—")+'</span>'+(lr?'<span class="pill '+(lr.status=="failed"?"bad":lr.status=="ok"?"ok":"warn")+'">最近运行：'+(st[lr.status]||esc(lr.status))+'</span>':'')+'<span class="muted small">数据生成 '+esc(V.generated_at)+'（北京时间）</span></div>';
+if(s.market_ok===false)h+='<div class="note">弱市模式：沪深300ETF 低于 50 日线，单笔风险减半、最多持 2 只。</div>';
+h+='<section class="card"><div class="kv"><div><span>净资产</span><b>'+f2(nv)+'</b></div><div><span>累计收益</span><b class="'+cls(r)+'">'+pct(r)+'</b></div><div><span>沪深300ETF</span><b class="'+cls(br)+'">'+pct(br)+'</b></div><div><span>当前回撤</span><b>'+(dd*100).toFixed(2)+'%</b></div><div><span>持仓</span><b>'+(s.positions||[]).length+' / 5</b></div><div><span>现金</span><b>'+f2(s.cash)+'</b></div></div>'+chart(nav)+'</section>';
+h+='<section class="card"><h2>最新盘后报告'+(V.report?'（'+esc(V.report.name.replace(".md",""))+'）':'')+'</h2><div class="md">'+(V.report?md(V.report.text):'<p class="muted">暂无</p>')+'</div></section>';
+const tr=(V.trades||[]).slice().reverse();
+h+='<section class="card"><h2>全部成交</h2>'+(tr.length?'<div class="tw"><table><tr><th>日期</th><th>股票</th><th>方向</th><th>价格</th><th>股数</th><th>费用</th><th>原因</th></tr>'+tr.map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.name)+'</td><td class="'+(t.side=="买入"?"pos":"neg")+'">'+esc(t.side)+'</td><td>'+esc(t.price)+'</td><td>'+esc(t.shares)+'</td><td>'+esc(t.fee)+'</td><td style="text-align:left">'+esc(t.reason)+'</td></tr>').join("")+'</table></div>':'<p class="muted">暂无成交。</p>')+'</section>';
+if(V.weekly)h+='<section class="card"><details><summary>周度趋势筛选（'+esc(V.weekly.name.replace("weekly-","").replace(".md",""))+'）</summary><div class="md">'+md(V.weekly.text)+'</div></details></section>';
+h+='<section class="card"><h2>运行记录</h2>'+(runs.length?'<div class="tw"><table><tr><th>时间(北京)</th><th>状态</th><th>说明</th></tr>'+runs.slice().reverse().slice(0,15).map(x=>'<tr><td>'+esc(x.ts_bj.slice(5))+'</td><td class="'+(x.status=="failed"?"bad":x.status=="ok"?"ok":"warn")+'">'+(st[x.status]||esc(x.status))+'</td><td style="white-space:normal;text-align:left">'+esc(x.note)+'</td></tr>').join("")+'</table></div>':'<p class="muted">由 Mac 接手后开始记录。2026-11-13 的建账由原云端任务完成。</p>')+'<p class="muted small">失败和非交易日原样保留，不会被覆盖。</p></section>';
+h+='<section class="card"><details><summary>规则摘要</summary><div class="md"><ul><li>选股：周线趋势模板（价&gt;10/30/40周线、40周线上行、距52周高≤25%、半年强于沪深300）。</li><li>形态：最近60日高点后整理≥15天，三段振幅逐级收缩、末段≤10%，末段量能≤50日均量的75%。</li><li>信号：收盘放量（≥1.5倍50日均量）站上枢轴、追高≤5%；弱市单笔风险减半、最多持2只。</li><li>执行：T日盘后冻结计划，T+1开盘成交；高开超枢轴3%放弃；一字板不成交。</li><li>风控：单笔风险1%净值，单股≤25%，最多5只，总仓≤90%；回撤10%风险减半，15%暂停开仓。</li><li>卖出：触及止损；2R卖1/3并移止损到成本；收盘破20日线；买入3日内跌回枢轴；30天未达1R。</li><li>费用：佣金万3最低5元、过户费万0.1、卖出印花税万5、双边滑点0.1%。</li></ul></div></details></section>';
+el.innerHTML=h;}
+const views={app:document.getElementById("app"),vcp:el},links=document.querySelectorAll(".tabs a");
+function show(){const v=location.hash==="#vcp"?"vcp":"app";for(const k in views)views[k].hidden=(k!==v);links.forEach(a=>{if(a.dataset.view===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});window.scrollTo(0,0)}
+window.addEventListener("hashchange",show);show();
 })();
 </script>
