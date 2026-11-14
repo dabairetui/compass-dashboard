@@ -1,0 +1,129 @@
+<title>小小白·罗盘系统</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 布局：单列控制台。顶部状态条 → 四账户卡片 → 运行记录 → 历史回放（明确标注非正式业绩） */
+:root{
+  --bg:#F3F6F9; --surface:#FFFFFF; --ink:#16202E; --muted:#5B6778; --line:#DCE2EA;
+  --accent:#0E6B8C; --up:#C8322B; --down:#1B8A57; --warn:#B26A00; --bad:#B3261E; --ok:#1B8A57;
+  --c1:#0E6B8C; --c2:#8A94A4; --c3:#C98A1B;
+  --font-ui:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  --font-head:"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC",serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F141B; --surface:#171E27; --ink:#E6EBF2; --muted:#93A0B2; --line:#283240;
+  --accent:#4DB3D6; --up:#F0625A; --down:#3FBF85; --warn:#E3A13B; --bad:#F2766E; --ok:#3FBF85;
+  --c1:#4DB3D6; --c2:#7E8A9B; --c3:#E3A13B; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0F141B; --surface:#171E27; --ink:#E6EBF2; --muted:#93A0B2; --line:#283240;
+  --accent:#4DB3D6; --up:#F0625A; --down:#3FBF85; --warn:#E3A13B; --bad:#F2766E; --ok:#3FBF85;
+  --c1:#4DB3D6; --c2:#7E8A9B; --c3:#E3A13B; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);line-height:1.55;font-size:14px;margin:0;
+  padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.wrap>*{min-width:0}
+h1{font-family:var(--font-head);font-size:1.5rem;margin:0;text-wrap:balance}
+h2{font-family:var(--font-head);font-size:1.1rem;margin:0}
+h3{font-size:.8rem;letter-spacing:.08em;color:var(--muted);margin:0 0 6px;font-weight:600}
+p{margin:0}.muted{color:var(--muted)}.small{font-size:.8rem}
+.bar{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:.75rem;border:1px solid currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+.card>*{min-width:0}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;align-items:baseline}
+.big{font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kv div{min-width:0}.kv b{display:block;font-size:1rem;font-variant-numeric:tabular-nums}
+.kv span{font-size:.75rem;color:var(--muted)}
+.pos{color:var(--up)}.neg{color:var(--down)}   /* 红涨绿跌 */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.82rem}
+th,td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:600}
+svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle}
+details summary{cursor:pointer;color:var(--accent);font-size:.85rem}
+.note{border-left:3px solid var(--warn);padding:6px 10px;background:var(--surface);font-size:.82rem}
+</style>
+<div class="wrap" id="app"><h1>小小白·罗盘系统</h1><p class="muted">正在读取账本数据……</p></div>
+<script src="data/dashboard.js"></script>
+<script>
+(function(){
+const $=(h)=>{const d=document.createElement("div");d.innerHTML=h;return d.firstElementChild};
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const f2=(x)=>Number(x).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=(x,d=2)=>(x>=0?"+":"")+(x*100).toFixed(d)+"%";
+const cls=(x)=>x>0?"pos":x<0?"neg":"";
+const app=document.getElementById("app");
+const D=window.DASH;
+if(!D||!D.accounts||!D.accounts.length){
+  app.innerHTML='<h1>小小白·罗盘系统</h1><div class="bar"><span class="pill warn">尚未初始化</span><span>账本里还没有任何账户数据，所以没有任何净值、持仓或成交可以显示。</span></div><p class="muted">四个模拟账户（A股稳健、A股进攻、美股稳健、美股进攻）会在 Mac 上首次运行时建账，之后每个交易日收盘后更新本页。全部为模拟交易。</p>';
+  return;
+}
+const now=new Date(D.generated_at);
+function ageDays(dstr){return Math.floor((now-new Date(dstr+"T00:00:00Z"))/86400000)}
+function chart(a){
+  const h=a.history; if(h.length<2) return '<p class="muted small">净值曲线至少要两个交易日才能画出。</p>';
+  const W=640,H=190,L=44,R=10,T=10,B=22;
+  const vals=h.flatMap(r=>[r[1],a.shadow_started?r[2]:r[1],a.shadow_started?r[3]:r[1]]);
+  let lo=Math.min(...vals),hi=Math.max(...vals); const pad=(hi-lo)*.1||.01; lo-=pad;hi+=pad;
+  const x=i=>L+(W-L-R)*i/(h.length-1), y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const line=(k,c,dash)=>'<polyline fill="none" stroke="'+c+'" stroke-width="2" '+(dash?'stroke-dasharray="4 3" ':'')+'points="'+h.map((r,i)=>x(i).toFixed(1)+","+y(r[k]).toFixed(1)).join(" ")+'"/>';
+  let g="";for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3;g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+v.toFixed(3)+'</text>'}
+  g+='<text x="'+L+'" y="'+(H-5)+'" font-size="11" fill="var(--muted)">'+h[0][0]+'</text><text x="'+(W-R)+'" y="'+(H-5)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+h[h.length-1][0]+'</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="净值曲线">'+g+(a.shadow_started?line(3,"var(--c3)",1)+line(2,"var(--c2)",1):"")+line(1,"var(--c1)")+'</svg>'+
+   '<div class="legend"><span><i style="background:var(--c1)"></i>本账户</span>'+(a.shadow_started?'<span><i style="background:var(--c2)"></i>'+esc(a.benchmark_name)+'</span><span><i style="background:var(--c3)"></i>对照组（同资产不择时）</span>':'')+'</div>';
+}
+function posTable(a){
+  if(!a.positions.length) return '<p class="muted small">当前全部是现金，没有持仓。</p>';
+  return '<div class="tw"><table><tr><th>持仓</th><th>份额</th><th>现价</th><th>市值</th><th>占比</th><th>浮盈亏</th></tr>'+a.positions.map(p=>'<tr><td>'+esc(p.name)+(p.is_cash?' <span class="muted">(现金类)</span>':'')+'</td><td>'+p.shares.toLocaleString()+'</td><td>'+p.price+'</td><td>'+f2(p.value)+'</td><td>'+(p.weight*100).toFixed(1)+'%</td><td class="'+cls(p.pnl)+'">'+pct(p.pnl_pct)+'</td></tr>').join("")+'<tr><td>现金</td><td></td><td></td><td>'+f2(a.cash)+'</td><td>'+(a.cash/a.nav*100).toFixed(1)+'%</td><td></td></tr></table></div>';
+}
+function orders(a){
+  if(!a.pending.length) return '<p class="muted small">没有待成交订单。</p>';
+  return '<div class="tw"><table><tr><th>编号</th><th>方向</th><th>标的</th><th>份额</th><th>参考价</th></tr>'+a.pending.map(o=>'<tr><td>'+o.id+'</td><td class="'+(o.side=="BUY"?"pos":"neg")+'">'+(o.side=="BUY"?"买入":"卖出")+'</td><td>'+esc(o.name)+'</td><td>'+o.shares.toLocaleString()+(o.sell_all?'（清仓）':'')+'</td><td>'+o.ref_price+'</td></tr>').join("")+'</table></div><p class="muted small">订单在下一个收盘价成交；A股 T+1 规则下当日买入的份额次日才可卖出（本系统调仓按收盘撮合，不做日内买卖）。</p>';
+}
+function fills(a){
+  if(!a.fills.length) return '<p class="muted small">还没有成交。</p>';
+  return '<div class="tw"><table><tr><th>日期</th><th>方向</th><th>标的</th><th>份额</th><th>成交价</th><th>费用</th></tr>'+a.fills.slice(-12).reverse().map(r=>'<tr><td>'+r.date+'</td><td>'+(r.side=="BUY"?"买入":"卖出")+'</td><td>'+esc(r.name)+'</td><td>'+r.shares.toLocaleString()+'</td><td>'+Number(r.price).toFixed(4)+'</td><td>'+f2(r.fee)+'</td></tr>').join("")+'</table></div>';
+}
+function why(a){
+  const d=a.detail||{};let rows="";
+  if(d.kind=="allocation") rows=d.rows.map(r=>'<tr><td>'+esc(D.names[r.symbol])+'</td><td>'+(r.base*100).toFixed(0)+'%</td><td>'+r.score.toFixed(2)+'</td><td>'+(r.weight*100).toFixed(1)+'%</td></tr>').join("");
+  else if(d.kind=="rotation") rows=d.rows.slice().sort((p,q)=>(p.rank||99)-(q.rank||99)).map(r=>'<tr><td>'+esc(D.names[r.symbol])+'</td><td>'+(r.mom==null?"—":pct(r.mom,1))+'</td><td>'+r.score.toFixed(2)+'</td><td>'+(r.weight?(r.weight*100).toFixed(0)+'%':(r.eligible?'候补':'不入围'))+'</td></tr>').join("");
+  else if(d.kind=="levered_trend") rows=d.legs.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+esc(D.names[r.signal])+'</td><td>'+r.score.toFixed(2)+'</td><td>'+({lev:"杠杆产品",base:"本体",none:"空仓"})[r.gear]+'</td></tr>').join("");
+  const head=d.kind=="allocation"?'<th>资产</th><th>基准权重</th><th>趋势得分</th><th>目标权重</th>':d.kind=="rotation"?'<th>资产</th><th>动量</th><th>趋势得分</th><th>目标</th>':'<th>腿</th><th>信号资产</th><th>趋势得分</th><th>档位</th>';
+  return rows?'<details><summary>'+a.ref_month+' 月末信号的依据</summary><div class="tw"><table><tr>'+head+'</tr>'+rows+'</table></div></details>':"";
+}
+function card(a){
+  const bm=a.shadow_started?(a.unit/a.bench_unit-1):null;
+  const brakeCls=a.brake==0?"ok":a.brake==1?"warn":"bad";
+  return '<section class="card" id="'+a.id+'"><div class="head"><h2>'+esc(a.name)+'</h2><span class="muted small">'+esc(a.currency)+' · 初始 '+f2(a.capital)+'</span></div>'+
+   '<div><div class="big '+cls(a.ret)+'">'+pct(a.ret)+'</div><span class="muted small">净资产 '+f2(a.nav)+' '+a.currency+' · 单位净值 '+a.unit.toFixed(4)+'</span></div>'+
+   '<div class="kv"><div><b class="'+cls(-a.drawdown)+'">'+(a.drawdown*100).toFixed(2)+'%</b><span>当前回撤</span></div><div><b>'+(a.max_drawdown*100).toFixed(2)+'%</b><span>历史最大回撤</span></div>'+
+   '<div><b class="'+(bm==null?"":cls(bm))+'">'+(bm==null?"—":pct(bm))+'</b><span>相对基准超额</span></div><div><b><span class="pill '+brakeCls+'" style="font-size:.8rem;color:var(--'+(a.brake==0?'ok':a.brake==1?'warn':'bad')+')">'+esc(a.brake_name)+'</span></b><span>风控刹车</span></div></div>'+
+   chart(a)+'<div><h3>当前持仓</h3>'+posTable(a)+'</div><div><h3>待成交订单</h3>'+orders(a)+'</div>'+why(a)+
+   '<details><summary>最近成交与费用</summary>'+fills(a)+'<p class="muted small">累计费用 '+f2(a.stats.fees)+'，累计成交额 '+f2(a.stats.turnover)+'，累计分红 '+f2(a.stats.dividends)+'，成交 '+a.stats.trades+' 笔。</p></details></section>';
+}
+const mk=D.markets;
+const lastD=[mk.CN.last_date,mk.US.last_date].filter(Boolean).sort().pop();
+const stale=ageDays(lastD);
+const lastRun=D.runs.length?D.runs[D.runs.length-1]:null;
+let html='<div><h1>小小白·罗盘系统</h1><p class="muted small">全部为模拟交易，不连接券商，不涉及真实资金。引擎 '+esc(D.engine_version)+' · 章程 '+esc(D.charter_version)+'</p></div>';
+html+='<div class="bar"><span>A股结算至 <b>'+mk.CN.last_date+'</b></span><span>美股结算至 <b>'+mk.US.last_date+'</b></span>'+
+ '<span class="pill '+(D.ledger.ok?"ok":"bad")+'">账本'+(D.ledger.ok?"完整":"校验未通过")+'（'+D.ledger.records+' 条）</span>'+
+ (lastRun?'<span class="pill '+(lastRun.status=="failed"?"bad":lastRun.status=="warn"?"warn":"ok")+'">最近运行：'+({ok:"成功",warn:"成功但有提示",failed:"失败",init:"首次建账",idle:"无新交易日"})[lastRun.status]+'</span>':'')+
+ '<span class="muted small">页面生成 '+esc(D.generated_at.replace("T"," ").slice(0,16))+' UTC</span></div>';
+if(stale>5) html+='<div class="note bad">账本已有 '+stale+' 天没有结算新交易日。可能是 Mac 没开机或网络故障，运行记录里有原因。</div>';
+if(!D.ledger.ok) html+='<div class="note bad">账本哈希链校验未通过：'+esc(D.ledger.problems.join("；"))+'</div>';
+if(D.frozen&&D.frozen.length) html+='<div class="note">有标的被冻结待核（疑似拆分或分红）：'+D.frozen.map(x=>esc(x.name)+"（"+esc(x.why)+"）").join("；")+'</div>';
+html+=D.accounts.map(card).join("");
+html+='<section class="card"><h2>运行记录</h2>'+(D.runs.length?'<div class="tw"><table><tr><th>时间(UTC)</th><th>状态</th><th>说明</th></tr>'+D.runs.slice().reverse().slice(0,15).map(r=>'<tr><td>'+esc(r.ts.replace("T"," ").slice(5,16))+'</td><td class="'+(r.status=="failed"?"bad":r.status=="warn"?"warn":"ok")+'">'+({ok:"成功",warn:"提示",failed:"失败",init:"建账",idle:"无新日"})[r.status]+'</td><td style="white-space:normal;text-align:left">'+esc([].concat(r.warnings||[],r.notes||[]).slice(0,3).join("；")||r.note||"")+'</td></tr>').join("")+'</table></div>':'<p class="muted">还没有运行记录。</p>')+'<p class="muted small">失败和警告原样保留，不会被覆盖。</p></section>';
+if(D.replay&&D.replay.accounts){
+  const R=D.replay.accounts;
+  html+='<section class="card"><h2>历史回放（非正式业绩）</h2><div class="note">这是用过去的月末价格把同一套规则重走一遍，用来了解规则的脾气。规则是在看过这段历史之后才定下的，所以结果必然偏乐观，不能当作未来收益的依据。正式业绩只看上面的账户。</div><div class="tw"><table><tr><th>账户</th><th>区间</th><th>策略</th><th>回撤</th><th>对照</th><th>回撤</th><th>基准</th><th>回撤</th></tr>'+Object.values(R).map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.start+'→'+r.end+'</td><td class="'+cls(r.strategy.total)+'">'+pct(r.strategy.total,1)+'</td><td>'+(r.strategy.mdd*100).toFixed(1)+'%</td><td class="'+cls(r.control.total)+'">'+pct(r.control.total,1)+'</td><td>'+(r.control.mdd*100).toFixed(1)+'%</td><td class="'+cls(r.benchmark.total)+'">'+pct(r.benchmark.total,1)+'</td><td>'+(r.benchmark.mdd*100).toFixed(1)+'%</td></tr>').join("")+'</table></div><p class="muted small">回放简化：月末收盘价换仓，不含月内止损/降档/回撤刹车。</p></section>';
+}
+app.replaceChildren(...$("<div>"+html+"</div>").children);
+})();
+</script>
