@@ -23,6 +23,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);line-heigh
   padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:760px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .wrap>*{min-width:0}
+.wrap{scroll-margin-top:70px}
 h1{font-family:var(--font-head);font-size:1.5rem;margin:0;text-wrap:balance}
 h2{font-family:var(--font-head);font-size:1.1rem;margin:0}
 h3{font-size:.8rem;letter-spacing:.08em;color:var(--muted);margin:0 0 6px;font-weight:600}
@@ -51,6 +52,36 @@ details summary{cursor:pointer;color:var(--accent);font-size:.85rem}
 .tabs a{flex:1;text-align:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-decoration:none;font-weight:600;font-size:.9rem}
 .tabs a[aria-current="page"]{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
 .md p{margin:0 0 6px}.md ul{margin:0;padding-left:18px}.md li{margin:2px 0;font-size:.85rem}
+
+/* VCP 页 */
+.vh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px}
+.vpills{display:flex;flex-wrap:wrap;gap:6px}.vpills .pill{padding:2px 10px}
+.hero .hnav{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.hero .hnav span{color:var(--muted);font-size:.8rem}
+.hero .hnav b{font-size:2rem;font-variant-numeric:tabular-nums;letter-spacing:-.01em}.hero .hnav em{font-style:normal;font-weight:700;font-size:1.05rem}
+.hero .kv{grid-template-columns:repeat(3,minmax(0,1fr))}.hero .kv b{font-size:.95rem}
+.plan{margin:0;padding-left:18px}.plan li{margin:4px 0}
+.tsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tsum div{border-radius:8px;padding:8px 10px;background:var(--bg);border-left:4px solid var(--c2)}
+.tsum b{display:block;font-size:1.4rem;font-variant-numeric:tabular-nums}.tsum span{font-size:.75rem;color:var(--muted)}
+.tsum .t1{border-color:var(--up)}.tsum .t2{border-color:var(--warn)}.tsum .t3{border-color:var(--c2)}
+.flt{display:flex;gap:6px;flex-wrap:wrap}.flt button{font:inherit;font-size:.8rem;padding:4px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.flt button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.rank{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.rk{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto auto;grid-template-areas:"no nm ms tc" "no st st st";gap:2px 10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line)}
+.rk:last-child{border-bottom:0}
+.rk .no{grid-area:no;font-variant-numeric:tabular-nums;font-weight:700;color:var(--muted);text-align:center;align-self:start;padding-top:2px}
+.rk.t1 .no{color:var(--up)}.rk.t2 .no{color:var(--warn)}
+.rk .nm{grid-area:nm;min-width:0}.rk .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rk small{color:var(--muted);font-size:.72rem}
+.rk .ms{grid-area:ms;text-align:right;font-variant-numeric:tabular-nums}.rk .ms span{display:block}.rk .ms i{font-style:normal;font-size:.78rem}
+.rk .st{grid-area:st;font-size:.78rem;color:var(--muted)}
+.tc{grid-area:tc;font-size:.72rem;padding:1px 8px;border-radius:10px;border:1px solid currentColor;white-space:nowrap}
+.tc.t1{color:var(--up)}.tc.t2{color:var(--warn)}.tc.t3,.tc.t4{color:var(--c2)}
+.rk.strong .st{color:var(--accent)}
+.fold{padding:0}.fold summary{padding:12px 14px;font-family:var(--font-head);font-size:1rem;color:var(--ink);list-style:none;display:flex;justify-content:space-between}
+.fold summary::after{content:"展开";font-family:var(--font-ui);font-size:.78rem;color:var(--accent)}.fold details[open] summary::after{content:"收起"}
+.fold summary::-webkit-details-marker{display:none}.fb{padding:0 14px 14px}
+.more{font:inherit;font-size:.85rem;padding:8px;border:1px dashed var(--line);border-radius:8px;background:transparent;color:var(--accent);cursor:pointer}
+.prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:6px 0}.prog i{display:block;height:100%;background:var(--accent)}
 </style>
 <nav class="tabs" aria-label="账户切换"><a href="#" data-view="app">四账户（罗盘）</a><a href="#vcp" data-view="vcp">VCP 突破</a></nav>
 <div class="wrap" id="app"><h1>小小白·罗盘系统</h1><p class="muted">正在读取账本数据……</p></div>
@@ -162,25 +193,35 @@ const el=document.getElementById("vcp"),V=window.VCP;
 if(!V||!V.state){el.innerHTML='<h1>小小白·VCP突破模拟账户</h1><div class="bar"><span class="pill warn">暂无数据</span><span>Mac 上的 VCP 账户还没有运行过，或数据文件尚未上传。</span></div>';}
 else{
 const s=V.state,nav=V.nav||[],last=nav[nav.length-1]||{},r=+last.ret||0,br=+last.bench_ret||0,dd=+last.dd||0,nv=last.nav?+last.nav:+s.cash;
-const runs=V.runs||[],lr=runs[runs.length-1];
-const st={ok:"成功",idle:"非交易日/未更新",failed:"失败"};
-let h='<div><h1>小小白·VCP突破模拟账户</h1><p class="muted small">全部为模拟交易，不连接券商。A股个股突破策略，初始 '+f2(V.initial_cash)+' 元 · 规则 '+esc(V.rules_version||"")+'</p></div>';
-h+='<div class="bar"><span>结算至 <b>'+esc(s.last_settled||"—")+'</b></span><span>计划冻结于 '+esc(s.plan&&s.plan.frozen_at||"—")+'</span>'+(lr?'<span class="pill '+(lr.status=="failed"?"bad":lr.status=="ok"?"ok":"warn")+'">最近运行：'+(st[lr.status]||esc(lr.status))+'</span>':'')+'<span class="muted small">数据生成 '+esc(V.generated_at)+'（北京时间）</span></div>';
-if(s.market_ok===false)h+='<div class="note">弱市模式：沪深300ETF 低于 50 日线，单笔风险减半、最多持 2 只。</div>';
-h+='<section class="card"><div class="kv"><div><span>净资产</span><b>'+f2(nv)+'</b></div><div><span>累计收益</span><b class="'+cls(r)+'">'+pct(r)+'</b></div><div><span>沪深300ETF</span><b class="'+cls(br)+'">'+pct(br)+'</b></div><div><span>当前回撤</span><b>'+(dd*100).toFixed(2)+'%</b></div><div><span>持仓</span><b>'+(s.positions||[]).length+' / 5</b></div><div><span>现金</span><b>'+f2(s.cash)+'</b></div></div>'+chart(nav)+'</section>';
-const T=V.tiers||{};const tierRow=x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.close)+'</td><td>'+esc(x.pivot)+'</td><td>'+esc(x.stop)+'（'+esc(x.stop_pct)+'%）</td><td>'+esc(x.dist)+'%</td><td>'+esc((x.depth||[]).join('→'))+'%</td><td>'+esc(x.dry)+'</td></tr>';
-const tierTab=a=>a&&a.length?'<div class="tw"><table><tr><th>股票</th><th>收盘</th><th>枢轴</th><th>止损</th><th>离枢轴</th><th>收缩幅度</th><th>量比</th></tr>'+a.map(tierRow).join('')+'</table></div>':'<p class="muted">暂无</p>';
-if(T.t1||T.t2||T.t3){h+='<section class="card"><h2>观察分档</h2><p class="muted small">'+esc(T.note||'')+'</p><h3>一档：离突破3%以内（明天可能出信号）</h3>'+tierTab(T.t1)+'<h3>二档：正在收缩</h3>'+tierTab(T.t2)+'<details><summary>三档：趋势达标、尚未成形（'+esc(T.t3_total||0)+' 只）</summary>'+((T.t3||[]).length?'<div class="tw"><table><tr><th>股票</th><th>收盘</th><th>未成形原因</th></tr>'+T.t3.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.close)+'</td><td style="white-space:normal;text-align:left">'+esc(x.why)+'</td></tr>').join('')+'</table></div>':'')+'</details></section>';}
-const BT=V.backtest,BP=V.bt_progress;
-if(BT||BP){let b='<section class="card"><h2>历史回测</h2>';if(BP)b+='<p class="muted small">回测数据：已下载 '+esc(BP.have)+' / '+esc(BP.total)+' 只（'+esc(BP.stop)+'，'+esc(BP.run_at)+'）</p>';
-if(BT){b+='<div class="tw"><table><tr><th>识别方法</th><th>可成交笔数</th><th>胜率</th><th>平均R</th><th>平均持有天数</th><th>组合期末净值</th><th>组合最大回撤</th><th>同期沪深300</th></tr>';for(const k of Object.keys(BT)){const x=BT[k];if(!x||typeof x!=='object'||!x['识别方法'])continue;b+='<tr><td>'+esc(x['识别方法'])+'</td><td>'+esc(x['可成交笔数'])+'</td><td>'+(x['胜率']==null?'—':(x['胜率']*100).toFixed(0)+'%')+'</td><td>'+esc(x['平均R'])+'</td><td>'+esc(x['平均持有天数'])+'</td><td>'+f2(x['组合期末净值'])+'</td><td>'+(x['组合最大回撤']*100).toFixed(1)+'%</td><td>'+(x['基准区间涨跌']==null?'—':pct(x['基准区间涨跌']))+'</td></tr>'}b+='</table></div>'}else b+='<p class="muted">数据下载完成后自动运行回测。</p>';h+=b+'</section>';}
-h+='<section class="card"><h2>最新盘后报告'+(V.report?'（'+esc(V.report.name.replace(".md",""))+'）':'')+'</h2><div class="md">'+(V.report?md(V.report.text):'<p class="muted">暂无</p>')+'</div></section>';
+const runs=V.runs||[],lr=runs[runs.length-1],st={ok:"成功",idle:"非交易日",failed:"失败"};
+const T=V.tiers||{},L=T.list||[],C=T.count||{},pos=s.positions||[],orders=(s.plan&&s.plan.orders)||[];
+const sec=(title,body,sub)=>'<section class="card"><div class="head"><h2>'+title+'</h2>'+(sub?'<span class="muted small">'+sub+'</span>':'')+'</div>'+body+'</section>';
+const fold=(title,body)=>'<section class="card fold"><details><summary>'+title+'</summary><div class="fb">'+body+'</div></details></section>';
+const tierName={1:"一档",2:"二档",3:"三档",4:"缺数据"};
+let h='<header class="vh"><div><h1>小小白·VCP突破模拟账户</h1><p class="muted small">纯模拟交易，不连接券商 · 初始 '+f2(V.initial_cash)+' 元</p></div><div class="vpills"><span class="pill">结算至 '+esc(s.last_settled||"—")+'</span>'+(lr?'<span class="pill '+(lr.status=="failed"?"bad":lr.status=="ok"?"ok":"warn")+'">'+(st[lr.status]||esc(lr.status))+'</span>':'')+(s.market_ok===false?'<span class="pill warn">弱市：风险减半·最多2只</span>':'<span class="pill ok">强市</span>')+'</div></header>';
+h+='<section class="card hero"><div class="hnav"><span>净资产</span><b>'+f2(nv)+'</b><em class="'+cls(r)+'">'+pct(r)+'</em></div><div class="kv"><div><span>沪深300ETF</span><b class="'+cls(br)+'">'+pct(br)+'</b></div><div><span>超额</span><b class="'+cls(r-br)+'">'+pct(r-br)+'</b></div><div><span>当前回撤</span><b>'+(dd*100).toFixed(2)+'%</b></div><div><span>持仓</span><b>'+pos.length+' 只</b></div><div><span>现金</span><b>'+f2(s.cash)+'</b></div></div>'+chart(nav)+'</section>';
+let plan=orders.length?'<ul class="plan">'+orders.map(o=>o.side=="买入"?'<li><b class="pos">买入</b> '+esc(o.name||o.code)+' '+esc(o.shares)+' 股 · 开盘价 ≤ '+esc(o.max_buy||"")+' 时成交 · 止损 '+esc(o.stop)+' · 枢轴 '+esc(o.pivot)+'</li>':'<li><b class="neg">卖出</b> '+esc(o.name||o.code)+' 全部 · '+esc(o.reason)+'</li>').join("")+'</ul>':'<p>下一交易日<b>不下单</b>。'+(C[1]?'有 '+C[1]+' 只离突破 3% 以内，收盘放量越过枢轴即出信号。':'观察池中暂时没有临近突破的形态。')+'</p>';
+h+=sec('下一交易日计划',plan,'冻结于 '+esc(s.plan&&s.plan.frozen_at||"—"));
+if(pos.length)h+=sec('持仓','<div class="tw"><table><tr><th>股票</th><th>股数</th><th>成本</th><th>现价</th><th>止损</th><th>盈亏</th></tr>'+pos.map(p=>'<tr><td>'+esc(p.name||p.code)+'</td><td>'+esc(p.shares)+'</td><td>'+esc(p.entry)+'</td><td>'+esc(p.last)+'</td><td>'+esc(p.stop)+'</td><td class="'+cls(p.last/p.entry-1)+'">'+pct(p.last/p.entry-1,1)+'</td></tr>').join("")+'</table></div>');
+const chip=t=>'<span class="tc t'+t+'">'+tierName[t]+'</span>';
+const nice=t=>String(t||'').replace(/\(<(\d+)\)/g,'（需≥$1）').replace(/\(([\d.]+)\)/g,'（量比$1）').replace(/、/g,'；');
+const row=x=>'<li class="rk t'+x.tier+(x.strong?' strong':'')+'"'+(x.rank>20?' data-more hidden':'')+'><span class="no">'+x.rank+'</span><div class="nm"><b>'+esc(x.name)+'</b><small>'+esc(x.code)+'</small></div><div class="ms"><span>'+(x.close==null?'—':esc(x.close))+(x.chg==null?'':' <i class="'+cls(x.chg)+'">'+(x.chg>0?'+':'')+x.chg+'%</i>')+'</span><small>半年 '+(x.ret26==null?'—':(x.ret26>0?'+':'')+x.ret26+'%')+'</small></div>'+chip(x.tier)+'<p class="st">'+esc(nice(x.status))+(x.pivot?' · 枢轴 '+esc(x.pivot)+' · 止损 '+esc(x.stop)+'（'+esc(x.stop_pct)+'%）· 收缩 '+esc((x.depth||[]).join('→'))+'%':'')+'</p></li>';
+const sumBar='<div class="tsum"><div class="t1"><b>'+(C[1]||0)+'</b><span>一档·临近突破</span></div><div class="t2"><b>'+(C[2]||0)+'</b><span>二档·正在收缩</span></div><div class="t3"><b>'+(C[3]||0)+'</b><span>三档·未成形</span></div></div>';
+const filt='<div class="flt" role="group" aria-label="筛选"><button data-f="all" aria-pressed="true">全部</button><button data-f="t12">一二档</button><button data-f="strong">强势延续</button></div>';
+h+=sec('观察池排名',sumBar+filt+(L.length?'<ol class="rank">'+L.map(row).join("")+'</ol>'+(L.length>20?'<button class="more" type="button">展开全部 '+L.length+' 只</button>':''):'<p class="muted">暂无观察池数据</p>')+'<p class="muted small">'+esc(T.note||'')+'</p>','共 '+L.length+' 只 · 行情 '+esc(T.asof||"")+' · 筛选 '+esc((s.watchlist_date||"").slice(0,10)));
+h+=fold('最新盘后报告'+(V.report?'（'+esc(V.report.name.replace(".md",""))+'）':''),'<div class="md">'+(V.report?md(V.report.text):'<p class="muted">暂无</p>')+'</div>');
 const tr=(V.trades||[]).slice().reverse();
-h+='<section class="card"><h2>全部成交</h2>'+(tr.length?'<div class="tw"><table><tr><th>日期</th><th>股票</th><th>方向</th><th>价格</th><th>股数</th><th>费用</th><th>原因</th></tr>'+tr.map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.name)+'</td><td class="'+(t.side=="买入"?"pos":"neg")+'">'+esc(t.side)+'</td><td>'+esc(t.price)+'</td><td>'+esc(t.shares)+'</td><td>'+esc(t.fee)+'</td><td style="text-align:left">'+esc(t.reason)+'</td></tr>').join("")+'</table></div>':'<p class="muted">暂无成交。</p>')+'</section>';
-if(V.weekly)h+='<section class="card"><details><summary>周度趋势筛选（'+esc(V.weekly.name.replace("weekly-","").replace(".md",""))+'）</summary><div class="md">'+md(V.weekly.text)+'</div></details></section>';
-h+='<section class="card"><h2>运行记录</h2>'+(runs.length?'<div class="tw"><table><tr><th>时间(北京)</th><th>状态</th><th>说明</th></tr>'+runs.slice().reverse().slice(0,15).map(x=>'<tr><td>'+esc(x.ts_bj.slice(5))+'</td><td class="'+(x.status=="failed"?"bad":x.status=="ok"?"ok":"warn")+'">'+(st[x.status]||esc(x.status))+'</td><td style="white-space:normal;text-align:left">'+esc(x.note)+'</td></tr>').join("")+'</table></div>':'<p class="muted">由 Mac 接手后开始记录。2026-11-13 的建账由原云端任务完成。</p>')+'<p class="muted small">失败和非交易日原样保留，不会被覆盖。</p></section>';
-h+='<section class="card"><details><summary>规则摘要</summary><div class="md"><ul><li>选股：周线趋势模板（价&gt;10/30/40周线、40周线上行、距52周高≤25%、半年强于沪深300）。</li><li>形态（V2.0）：近65日高点后整理10~65天；按波段高低点找收缩，右侧至少2次逐级缩小，首段≤35%、末段≤10%；最近5日均量≤50日均量×0.8；枢轴＝末次收缩高点，止损＝末次收缩低点（≤8%）。</li><li>信号：收盘放量（≥1.5倍50日均量）站上枢轴、追高≤5%；弱市单笔风险减半、最多持2只。</li><li>执行：T日盘后冻结计划，T+1开盘成交；高开超枢轴3%放弃；一字板不成交。</li><li>风控：单笔风险1%净值，单股≤25%，最多5只，总仓≤90%；回撤10%风险减半，15%暂停开仓。</li><li>卖出：触及止损；2R卖1/3并移止损到成本；收盘破20日线；买入3日内跌回枢轴；30天未达1R。</li><li>费用：佣金万3最低5元、过户费万0.1、卖出印花税万5、双边滑点0.1%。</li></ul></div></details></section>';
-el.innerHTML=h;}
+h+=fold('全部成交（'+tr.length+' 笔）',tr.length?'<div class="tw"><table><tr><th>日期</th><th>股票</th><th>方向</th><th>价格</th><th>股数</th><th>费用</th><th>原因</th></tr>'+tr.map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.name)+'</td><td class="'+(t.side=="买入"?"pos":"neg")+'">'+esc(t.side)+'</td><td>'+esc(t.price)+'</td><td>'+esc(t.shares)+'</td><td>'+esc(t.fee)+'</td><td style="text-align:left">'+esc(t.reason)+'</td></tr>').join("")+'</table></div>':'<p class="muted">暂无成交。</p>');
+const BT=V.backtest,BP=V.bt_progress;
+{let b='';if(BP)b+='<p class="muted small">回测数据：已下载 '+esc(BP.have)+' / '+esc(BP.total)+' 只（'+esc(BP.stop)+'，'+esc(BP.run_at)+'）</p><div class="prog"><i style="width:'+Math.min(100,BP.have/BP.total*100).toFixed(1)+'%"></i></div>';
+if(BT){b+='<div class="tw"><table><tr><th>识别方法</th><th>可成交</th><th>胜率</th><th>平均R</th><th>持有天数</th><th>期末净值</th><th>最大回撤</th><th>同期沪深300</th></tr>';for(const k of Object.keys(BT)){const x=BT[k];if(!x||typeof x!=='object'||!x['识别方法'])continue;b+='<tr><td>'+esc(x['识别方法'])+'</td><td>'+esc(x['可成交笔数'])+'</td><td>'+(x['胜率']==null?'—':(x['胜率']*100).toFixed(0)+'%')+'</td><td>'+esc(x['平均R'])+'</td><td>'+esc(x['平均持有天数'])+'</td><td>'+f2(x['组合期末净值'])+'</td><td>'+(x['组合最大回撤']*100).toFixed(1)+'%</td><td>'+(x['基准区间涨跌']==null?'—':pct(x['基准区间涨跌']))+'</td></tr>'}b+='</table></div>'}else b+='<p class="muted small">数据下完后自动回测，结果显示在这里。</p>';h+=fold('历史回测',b);}
+if(V.weekly)h+=fold('周度趋势筛选（'+esc(V.weekly.name.replace("weekly-","").replace(".md",""))+'）','<div class="md">'+md(V.weekly.text)+'</div>');
+h+=fold('运行记录',runs.length?'<div class="tw"><table><tr><th>时间</th><th>状态</th><th>说明</th></tr>'+runs.slice().reverse().slice(0,15).map(x=>'<tr><td>'+esc(x.ts_bj.slice(5))+'</td><td class="'+(x.status=="failed"?"bad":x.status=="ok"?"ok":"warn")+'">'+(st[x.status]||esc(x.status))+'</td><td style="white-space:normal;text-align:left">'+esc(x.note)+'</td></tr>').join("")+'</table></div>':'<p class="muted">暂无</p>');
+h+=fold('规则摘要（'+esc((V.rules_version||"").split("（")[0])+'）','<div class="md"><ul><li>选股：全市场沪深主板＋创业板，周线趋势模板（价&gt;10/30/40周线、40周线上行、距52周高≤25%、高于52周低30%、半年强于沪深300），每周五更新。</li><li>形态：近65日高点后整理10~65天；按波段高低点找收缩，右侧至少2次逐级缩小，首段≤35%、末段≤10%；最近5日均量≤50日均量×0.8；枢轴＝末次收缩高点，止损＝末次收缩低点（≤8%）。</li><li>信号：收盘放量≥1.5倍50日均量、收盘在枢轴至枢轴×1.03之间；次日开盘成交，高开超3%或跌回枢轴下放弃。</li><li>风控：单笔风险1%（弱市0.5%、最多2只），单股≤25%，最多5只，总仓≤90%；回撤10%风险减半，15%暂停。</li><li>卖出：触及止损；2R卖1/3并移止损到成本；买入3日内跌回枢轴；持有5天后破20日线；30天未达1R。</li><li>费用：佣金万3最低5元、过户费万0.1、卖出印花税万5、双边滑点0.1%。</li></ul></div>');
+el.innerHTML=h;
+const mb=el.querySelector('.more');if(mb)mb.addEventListener('click',()=>{el.querySelectorAll('.rank li[data-more]').forEach(li=>li.hidden=false);mb.remove()});
+el.querySelectorAll('.flt button').forEach(b=>b.addEventListener('click',()=>{if(mb&&mb.isConnected)mb.remove();el.querySelectorAll('.flt button').forEach(x=>x.setAttribute('aria-pressed',x===b));const f=b.dataset.f;el.querySelectorAll('.rank li').forEach(li=>{li.hidden=f=='all'?false:f=='t12'?!(li.classList.contains('t1')||li.classList.contains('t2')):!li.classList.contains('strong')})}));
+}
 const views={app:document.getElementById("app"),vcp:el},links=document.querySelectorAll(".tabs a");
 function show(){const v=location.hash==="#vcp"?"vcp":"app";for(const k in views)views[k].hidden=(k!==v);links.forEach(a=>{if(a.dataset.view===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});window.scrollTo(0,0)}
 window.addEventListener("hashchange",show);show();
