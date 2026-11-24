@@ -451,6 +451,14 @@ if(acts.length||sigs.length)h+='<section class="card"><h2>今日动态</h2><div 
 // 持仓
 const pos=P.positions||[];
 h+='<section class="card"><div class="head"><h2>持仓</h2><span class="muted small">'+pos.length+' 只</span></div>'+(pos.length?'<div class="lst">'+pos.map(p=>{const r=(p.last/p.entry-1)*100;return item(esc(p.name.slice(0,1)),COL[p.book],esc(p.name)+' <span class="muted small">'+esc(p.shares)+'股</span>','成本 '+(+p.entry).toFixed(2)+' · 现价 '+(+p.last).toFixed(2)+' · 止损 '+esc(p.stop)+' · 回落卖出线 '+esc(p.trail_line),pc(r,1),cls(r))}).join("")+'</div>':'<p class="empty">空仓。</p>')+'</section>';
+// 股票池
+const PL=P.pool||{},plist=PL.list||[],ph=(PL.history||[]).slice(-1)[0];
+if(plist.length||PL.note){
+ const chg=ph?'<div class="dots">'+(ph.add||[]).slice(0,12).map(n=>'<i class="pos">＋'+esc(n)+'</i>').join("")+((ph.add||[]).length>12?'<i>等'+ph.add.length+'只</i>':'')+(ph.remove||[]).slice(0,12).map(n=>'<i class="neg">－'+esc(n)+'</i>').join("")+((ph.remove||[]).length>12?'<i>等'+ph.remove.length+'只</i>':'')+'</div>':'';
+ h+='<section class="card"><div class="head"><h2>股票池</h2><span class="muted small">'+plist.length+' 只 · '+(PL.date?esc(PL.date)+' 更新':'初始手选名单')+' · 每周五自动更新</span></div>'+
+  '<p class="small muted">'+esc(PL.note||'')+'</p>'+(ph?'<div><b class="small">本周变化：新进 '+(ph.add||[]).length+' 只，移出 '+(ph.remove||[]).length+' 只</b>'+chg+'</div>':'')+
+  (plist.length&&plist[0].amt!=null?'<details><summary>查看全部 '+plist.length+' 只</summary><div class="tw" style="margin-top:8px"><table><tr><th>股票</th><th>市值(亿)</th><th>市盈率</th><th>日均成交(亿)</th><th style="text-align:left">所属题材</th></tr>'+plist.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.mcap)+'</td><td>'+esc(x.pe)+'</td><td>'+esc(x.amt)+'</td><td style="text-align:left">'+esc((x.themes||[]).join("、"))+'</td></tr>').join("")+'</table></div></details>':'')+'</section>';
+}
 // 已平仓与成交
 const cl=(P.closed||[]).slice().reverse(),tr=(P.trades||[]).slice().reverse();
 const wins=cl.filter(x=>x.ret>0).length;
@@ -459,6 +467,7 @@ h+='<section class="card fold"><details><summary>全部成交（'+tr.length+' �
 h+='<section class="card fold"><details><summary>规则摘要（V'+esc(P.version)+'）</summary><div class="fb md"><ul>'+
  '<li><b>反转突破</b>：放量 1.5 倍站上 200 日线，次日开盘买；止损设在近 20 日最低点；收盘较持有期最高收盘回落 10%，次日开盘卖。</li>'+
  '<li><b>波动收缩突破</b>：均线多头、三段回撤逐级收窄、放量突破 20 日高点；同样止损；回落 15% 卖。</li>'+
+ '<li><b>股票池</b>：每周五收盘后从新浪“物理AI、具身智能、人形机器人、减速器、机器视觉”五个概念板块取成分股，剔除科创板、北交所、ST；只保留同时属于 2 个以上板块、或属于物理AI板块、或千亿市值龙头的股票；再要求总市值 200 亿以上、盈利、近 20 日日均成交额 5 亿以上，按成交额取前 50 只。已持有的股票移出池子后照常按规则管到卖出。</li>'+
  '<li><b>开关</b>：反转看最近 4 笔战绩（至少 2 笔赚钱）；收缩突破看板块宽度（超过 50%）。</li>'+
  '<li><b>仓位</b>：两个子账户各 50 万元；单笔风险 1%，单只不超过 20%，每账户最多 5 只。</li>'+
  '<li><b>费用</b>：佣金万3最低5元、过户费万0.1、卖出印花税万5、滑点 0.1%。</li>'+
