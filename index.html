@@ -162,7 +162,7 @@ polyline{stroke-linecap:round;stroke-linejoin:round}
 .more{font:inherit;font-size:15px;font-weight:600;padding:11px;border:0;border-radius:14px;background:var(--fill2);color:var(--blue);cursor:pointer;transition:transform .25s var(--spring)}
 .more:active{transform:scale(.97)}
 
-/* 物理AI页 */
+/* 状态开关等通用样式 */
 .seg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .mini{border-radius:20px;padding:14px;background:var(--fill2);display:grid;gap:4px}
 .mini span{font-size:12px;color:var(--label2)}.mini b{font:700 24px/1.1 var(--font-r);font-variant-numeric:tabular-nums}
@@ -180,7 +180,7 @@ polyline{stroke-linecap:round;stroke-linejoin:round}
 
 /* —— 浮动液态玻璃标签栏 —— */
 .tabbar{position:fixed;z-index:40;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);
-  display:grid;grid-template-columns:repeat(3,1fr);padding:5px;border-radius:999px;width:min(420px,calc(100vw - 28px));
+  display:grid;grid-template-columns:repeat(2,1fr);padding:5px;border-radius:999px;width:min(320px,calc(100vw - 28px));
   background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));backdrop-filter:blur(var(--blur)) saturate(var(--sat));
   box-shadow:var(--glass-shadow),inset 0 .5px 0 var(--glass-edge),inset 0 -.5px 0 rgba(0,0,0,.04);transition:transform .45s var(--spring)}
 .tabbar.min{transform:translateX(-50%) scale(.94) translateY(4px)}
@@ -227,12 +227,10 @@ polyline{stroke-linecap:round;stroke-linejoin:round}
 <button class="gbtn" id="gbtn" type="button" aria-label="外观设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17" fill="currentColor" stroke="none"/></svg></button>
 <div class="wrap" id="app"><h1>罗盘</h1><p class="muted">正在读取账本数据……</p></div>
 <div class="wrap" id="vcp" hidden><h1>波动收缩突破</h1><p class="muted">正在读取账本数据……</p></div>
-<div class="wrap" id="pai" hidden><h1>物理AI</h1><p class="muted">正在读取账本数据……</p></div>
 <nav class="tabbar" id="tabbar" aria-label="账户切换">
   <span class="lens" id="lens" aria-hidden="true"></span>
   <a href="#" data-view="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor"/></svg>罗盘</a>
   <a href="#vcp" data-view="vcp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-6 3 3 4-8 3 5 4-3"/><path d="M3 21h18"/></svg>收缩突破</a>
-  <a href="#pai" data-view="pai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="7" width="12" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01M9.5 15h5M3 11v3M21 11v3"/></svg>物理AI</a>
 </nav>
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheett" aria-hidden="true">
@@ -246,7 +244,6 @@ polyline{stroke-linecap:round;stroke-linejoin:round}
 </div>
 <script src="data/dashboard.js"></script>
 <script src="data/vcp.js"></script>
-<script src="data/pai.js"></script>
 <script>
 (function(){
 const $=(h)=>{const d=document.createElement("div");d.innerHTML=h;return d.firstElementChild};
@@ -407,87 +404,10 @@ el.querySelectorAll('.flt button').forEach(b=>b.addEventListener('click',()=>{if
 })();
 </script>
 <script>
-/* 物理AI双规则模拟账户 */
-(function(){
-const el=document.getElementById("pai"),P=window.PAI;
-const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const f0=(x)=>Number(x).toLocaleString("zh-CN",{maximumFractionDigits:0});
-const f2=(x)=>Number(x).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
-const pc=(x,d=2)=>(x>=0?"+":"")+x.toFixed(d)+"%";
-const cls=(x)=>x>0?"pos":x<0?"neg":"";
-if(!P||!P.books){el.innerHTML='<div><h1>物理AI双规则</h1><p class="muted small">反转突破＋波动收缩突破 · 纯模拟</p></div><div class="bar"><span class="pill warn">暂无数据</span><span>Mac 上的物理AI账户还没有运行过，第一个交易日收盘后（17:05）会自动建账。</span></div>';return}
-const books=Object.keys(P.books),nav=P.nav||[],last=nav[nav.length-1]||{},first=nav[0]||{};
-const capAll=books.reduce((a,b)=>a+P.books[b].cap,0),navAll=books.reduce((a,b)=>a+(+last[b]||P.books[b].cap),0);
-const ret=(navAll/capAll-1)*100,hs=first.hs300?(last.hs300/first.hs300-1)*100:0;
-const COL={"反转突破":"var(--indigo)","波动收缩突破":"var(--teal)"};
-function chart(){
-  if(nav.length<2)return '<p class="muted small">净值曲线至少要两个交易日才能画出。</p>';
-  const W=640,H=180,L=40,R=8,T=10,B=22,n=nav.length-1;
-  const ser=books.map(b=>nav.map(r=>100*(+r[b])/P.books[b].cap)),bm=nav.map(r=>100*r.hs300/first.hs300),all=ser.flat().concat(bm);
-  let lo=Math.min(...all),hi=Math.max(...all);const pad=Math.max(.5,(hi-lo)*.12);lo-=pad;hi+=pad;
-  const x=i=>L+(W-L-R)*i/n,y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo)),pl=s=>s.map((v,i)=>x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
-  let g="";for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3;g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--sep)"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="var(--label2)">'+v.toFixed(1)+'</text>'}
-  g+='<text x="'+L+'" y="'+(H-5)+'" font-size="11" fill="var(--label2)">'+esc(nav[0].date)+'</text><text x="'+(W-R)+'" y="'+(H-5)+'" text-anchor="end" font-size="11" fill="var(--label2)">'+esc(nav[n].date)+'</text>';
-  g+='<polyline fill="none" stroke="var(--gray)" stroke-width="1.6" stroke-dasharray="4 4" points="'+pl(bm)+'"/>';
-  ser.forEach((s,k)=>{g+='<polyline class="draw" fill="none" stroke="'+COL[books[k]]+'" stroke-width="2.4" points="'+pl(s)+'"/>'});
-  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="两个子账户净值与沪深300对比">'+g+'</svg><div class="legend">'+books.map(b=>'<span><i style="background:'+COL[b]+'"></i>'+esc(b)+'</span>').join("")+'<span><i style="background:var(--gray)"></i>沪深300</span><span>起点＝100</span></div>';
-}
-const sw=P.switch||{},rec=sw.rec||[];
-let h='<div><h1>物理AI双规则</h1><p class="muted small">反转突破＋波动收缩突破 · 纯模拟，不涉及真实资金 · 股票池 '+esc(P.pool_size)+' 只</p></div>';
-h+='<div class="bar"><span>结算至 <b>'+esc(P.last_run)+'</b></span><span class="pill ok">自 '+esc(P.created)+' 起运行</span><span class="muted small">数据生成 '+esc(P.generated_at)+'</span></div>';
-if(P.missing&&P.missing.length)h+='<div class="note">今日取数失败、未参与扫描：'+P.missing.map(esc).join("、")+'</div>';
-h+='<section class="card"><div><span class="muted small">两个账户合计净资产</span><div class="big '+cls(ret)+'" data-count="'+navAll.toFixed(2)+'">'+f2(navAll)+'</div><span class="small"><b class="'+cls(ret)+'">'+pc(ret)+'</b> <span class="muted">· 同期沪深300 </span><b class="'+cls(hs)+'">'+pc(hs)+'</b> <span class="muted">· 超额 </span><b class="'+cls(ret-hs)+'">'+pc(ret-hs)+'</b></span></div>';
-h+='<div class="seg2">'+books.map(b=>{const v=+last[b]||P.books[b].cap,r=(v/P.books[b].cap-1)*100,n=(P.positions||[]).filter(p=>p.book==b).length;return '<div class="mini"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+COL[b]+';margin-right:6px"></i>'+esc(b)+'</span><b class="'+cls(r)+'">'+pc(r)+'</b><span>'+f0(v)+' 元 · 持仓 '+n+' 只</span></div>'}).join("")+'</div>'+chart()+'</section>';
-// 开关
-const tog=(on)=>'<span class="tog'+(on?' on':'')+'" role="img" aria-label="'+(on?'开':'关')+'"></span>';
-h+='<section class="card"><div class="head"><h2>开仓开关</h2><span class="muted small">开关关闭时只记录信号，不下单</span></div><div>'+
- '<div class="sw"><div class="tx"><b>反转突破</b><small>最近 4 笔已平仓至少 2 笔赚钱才开新仓</small><div class="dots">'+rec.map(x=>'<i class="'+cls(x.ret)+'">'+esc(x.name)+' '+pc(+x.ret,1)+'</i>').join("")+'</div></div>'+tog(sw.rev_on)+'</div>'+
- '<div class="sw"><div class="tx"><b>波动收缩突破</b><small>板块一半以上股票站上 50 日线才开新仓 · 当前 <b class="'+(sw.breadth>.5?'ok':'warn')+'">'+Math.round((sw.breadth||0)*100)+'%</b></small><div class="prog"><i style="width:'+Math.round((sw.breadth||0)*100)+'%;background:'+(sw.breadth>.5?'var(--green)':'var(--orange)')+'"></i></div></div>'+tog(sw.vcp_on)+'</div></div></section>';
-// 今日动态
-const acts=P.actions||[],sigs=P.signals||[],pend=P.pending||[];
-const item=(ic,col,t,s,rt,rc)=>'<div class="li"><span class="ic" style="background:'+col+'">'+ic+'</span><div class="tx"><b>'+t+'</b>'+(s?'<small>'+s+'</small>':'')+'</div>'+(rt?'<span class="rt '+(rc||'')+'">'+rt+'</span>':'')+'</div>';
-h+='<section class="card"><div class="head"><h2>明日计划</h2><span class="muted small">已冻结 · 次日开盘执行</span></div><div class="lst">'+(pend.length?pend.map(o=>o.side=="买"?item("买","var(--red)",esc(o.name),esc(o.book)+' · '+esc(o.reason)+' · 止损 '+esc(o.stop)+'，开盘低于止损则放弃'):item("卖","var(--green)",esc(o.name),esc(o.book)+' · '+esc(o.reason))).join(""):'<p class="empty">明日不下单。'+(!sw.rev_on&&!sw.vcp_on?'两个开关都关着，信号只记录不交易。':'今天没有新的买卖信号。')+'</p>')+'</div></section>';
-if(acts.length||sigs.length)h+='<section class="card"><h2>今日动态</h2><div class="lst">'+acts.map(a=>item(/买入/.test(a)?"买":/卖出/.test(a)?"卖":"·",/买入/.test(a)?"var(--red)":/卖出/.test(a)?"var(--green)":"var(--gray)",esc(a.replace(/^【[^】]+】/,"")),esc((a.match(/^【([^】]+)】/)||[])[1]||""))).join("")+sigs.map(s=>item("信","var(--blue)",esc(s.replace(/^【[^】]+】/,"").split("，")[0]),esc(s.replace(/^【[^】]+】[^，]*，/,"")))).join("")+'</div></section>';
-// 持仓
-const pos=P.positions||[];
-h+='<section class="card"><div class="head"><h2>持仓</h2><span class="muted small">'+pos.length+' 只</span></div>'+(pos.length?'<div class="lst">'+pos.map(p=>{const r=(p.last/p.entry-1)*100;return item(esc(p.name.slice(0,1)),COL[p.book],esc(p.name)+' <span class="muted small">'+esc(p.shares)+'股</span>','成本 '+(+p.entry).toFixed(2)+' · 现价 '+(+p.last).toFixed(2)+' · 止损 '+esc(p.stop)+' · 回落卖出线 '+esc(p.trail_line),pc(r,1),cls(r))}).join("")+'</div>':'<p class="empty">空仓。</p>')+'</section>';
-// 期望值排名（观察期）
-const EV=P.ev||{},EL=EV.latest,ES=EV.stats||{};
-if(EL){
- const r=x=>'<div class="li"><span class="ic" style="background:'+(x.rank<=3?'var(--red)':'var(--orange)')+'">'+x.rank+'</span><div class="tx"><b>'+esc(x.name)+'</b><small>'+esc(x.state)+' · 同类状态 '+esc(x.n)+' 次、跑赢池子 '+esc(x.win20)+'% · 本股同类 '+esc(x.own_n)+' 次</small></div><span class="rt '+cls(x.ev20)+'">'+pc(+x.ev20)+'<br><small class="muted">5日 '+pc(+x.ev5)+'</small></span></div>';
- const chk=[5,20].map(hh=>{const x=ES[hh];return x?'<div class="mini"><span>'+hh+' 日检验 · 已结算 '+x.n+' 天</span><b class="'+cls(x.top-x.pool)+'">'+pc(x.top-x.pool)+'</b><span>前10 '+pc(x.top)+' · 后10 '+pc(x.bottom)+' · 池子 '+pc(x.pool)+' · 前10跑赢池子 '+x.beat+'% 的天数</span></div>':'<div class="mini"><span>'+hh+' 日检验</span><b class="muted">等待中</b><span>满 '+hh+' 个交易日后开始结算</span></div>'}).join("");
- h+='<section class="card"><div class="head"><h2>期望值排名</h2><span class="pill warn">观察期 · 不交易</span></div><p class="small muted">依据 '+esc(EL.asof)+' 收盘。找出池内股票历史上和现在“相同状态”（离200日线远近、近20日涨跌、量能）的所有时点，统计之后20个交易日相对池子平均的超额收益；样本少的向0收缩。数值是统计平均，不是预测。</p><div class="lst">'+(EL.top||[]).map(r).join("")+'</div><div class="seg2">'+chk+'</div>'+
- '<details><summary>查看全部 '+(EL.all||[]).length+' 只排名</summary><div class="tw" style="margin-top:8px"><table><tr><th>名次</th><th>股票</th><th>20日期望</th><th>5日期望</th><th>样本</th><th>跑赢率</th><th style="text-align:left">当前状态</th></tr>'+(EL.all||[]).map(x=>'<tr><td>'+x.rank+'</td><td>'+esc(x.name)+'</td><td class="'+cls(x.ev20)+'">'+pc(+x.ev20)+'</td><td class="'+cls(x.ev5)+'">'+pc(+x.ev5)+'</td><td>'+esc(x.n)+'</td><td>'+esc(x.win20)+'%</td><td style="text-align:left">'+esc(x.state)+'</td></tr>').join("")+'</table></div></details></section>';
-}
-// 股票池
-const PL=P.pool||{},plist=PL.list||[],ph=(PL.history||[]).slice(-1)[0];
-if(plist.length||PL.note){
- const chg=ph?'<div class="dots">'+(ph.add||[]).slice(0,12).map(n=>'<i class="pos">＋'+esc(n)+'</i>').join("")+((ph.add||[]).length>12?'<i>等'+ph.add.length+'只</i>':'')+(ph.remove||[]).slice(0,12).map(n=>'<i class="neg">－'+esc(n)+'</i>').join("")+((ph.remove||[]).length>12?'<i>等'+ph.remove.length+'只</i>':'')+'</div>':'';
- h+='<section class="card"><div class="head"><h2>股票池</h2><span class="muted small">'+plist.length+' 只 · '+(PL.date?esc(PL.date)+' 更新':'初始手选名单')+' · 每周五自动更新</span></div>'+
-  '<p class="small muted">'+esc(PL.note||'')+'</p>'+(ph?'<div><b class="small">本周变化：新进 '+(ph.add||[]).length+' 只，移出 '+(ph.remove||[]).length+' 只</b>'+chg+'</div>':'')+
-  (plist.length&&plist[0].amt!=null?'<details><summary>查看全部 '+plist.length+' 只</summary><div class="tw" style="margin-top:8px"><table><tr><th>股票</th><th>市值(亿)</th><th>纯度</th><th>市盈率</th><th>日均成交(亿)</th><th style="text-align:left">所属题材</th></tr>'+plist.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.mcap)+'</td><td>'+esc(x.score==null?'':x.score)+'</td><td>'+esc(x.pe)+'</td><td>'+esc(x.amt)+'</td><td style="text-align:left">'+esc((x.themes||[]).join("、"))+'</td></tr>').join("")+'</table></div></details>':'')+'</section>';
-}
-// 已平仓与成交
-const cl=(P.closed||[]).slice().reverse(),tr=(P.trades||[]).slice().reverse();
-const wins=cl.filter(x=>x.ret>0).length;
-h+='<section class="card fold"><details><summary>已平仓（'+cl.length+' 笔'+(cl.length?' · 胜率 '+Math.round(wins/cl.length*100)+'%':'')+'）</summary><div class="fb">'+(cl.length?'<div class="lst">'+cl.map(x=>item(esc(x.name.slice(0,1)),COL[x.book],esc(x.name),esc(x.book)+' · '+esc(x.entry_date)+' → '+esc(x.exit),pc(+x.ret,1),cls(x.ret))).join("")+'</div>':'<p class="empty">还没有平仓记录。</p>')+'</div></details></section>';
-h+='<section class="card fold"><details><summary>全部成交（'+tr.length+' 笔）</summary><div class="fb">'+(tr.length?'<div class="tw"><table><tr><th>日期</th><th>股票</th><th>方向</th><th>价格</th><th>股数</th><th>费用</th><th>理由</th></tr>'+tr.map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.name)+'</td><td class="'+(t.side=="买"?"pos":"neg")+'">'+esc(t.side)+'</td><td>'+(+t.price).toFixed(2)+'</td><td>'+esc(t.shares)+'</td><td>'+esc(t.fee)+'</td><td style="text-align:left">'+esc(t.reason)+'</td></tr>').join("")+'</table></div>':'<p class="empty">暂无成交。</p>')+'</div></details></section>';
-h+='<section class="card fold"><details><summary>规则摘要（V'+esc(P.version)+'）</summary><div class="fb md"><ul>'+
- '<li><b>反转突破</b>：放量 1.5 倍站上 200 日线，次日开盘买；止损设在近 20 日最低点；收盘较持有期最高收盘回落 10%，次日开盘卖。</li>'+
- '<li><b>波动收缩突破</b>：均线多头、三段回撤逐级收窄、放量突破 20 日高点；同样止损；回落 15% 卖。</li>'+
- '<li><b>股票池</b>：每周五收盘后从新浪 16 个概念板块取成分股——整机与平台（物理AI、具身智能、人形机器人、机器人概念）、核心零部件（减速器、丝杠、灵巧手、伺服系统、驱动电机、轴承、传感器、机器视觉、PEEK材料）、应用载体（无人驾驶、激光雷达、毫米波雷达），剔除科创板、北交所、ST。题材纯度打分：前两组每个板块 2 分、应用载体 1 分，5 分以上或属于物理AI板块才合格；再要求总市值 200 亿以上、盈利、近 20 日日均成交额 5 亿以上，按纯度得分、再按成交额取前 50 只。已持有的股票移出池子后照常按规则管到卖出。</li>'+
- '<li><b>开关</b>：反转看最近 4 笔战绩（至少 2 笔赚钱）；收缩突破看板块宽度（超过 50%）。</li>'+
- '<li><b>仓位</b>：两个子账户各 50 万元；单笔风险 1%，单只不超过 20%，每账户最多 5 只。</li>'+
- '<li><b>费用</b>：佣金万3最低5元、过户费万0.1、卖出印花税万5、滑点 0.1%。</li>'+
- '<li>回测依据：41 只物理AI股约一年半数据。2025 年表现好、2026 年小亏，规则需要实盘模拟继续验证。</li></ul></div></details></section>';
-el.innerHTML=h;
-})();
-</script>
-<script>
 /* 外壳：路由、液态玻璃标签栏、大标题折叠、数字滚动、外观设置 */
 (function(){
-const root=document.documentElement,views={app:document.getElementById("app"),vcp:document.getElementById("vcp"),pai:document.getElementById("pai")};
-const order=["app","vcp","pai"],links=[...document.querySelectorAll(".tabbar a")],lens=document.getElementById("lens"),tabbar=document.getElementById("tabbar");
+const root=document.documentElement,views={app:document.getElementById("app"),vcp:document.getElementById("vcp")};
+const order=["app","vcp"],links=[...document.querySelectorAll(".tabbar a")],lens=document.getElementById("lens"),tabbar=document.getElementById("tabbar");
 const navbar=document.getElementById("navbar"),navtitle=document.getElementById("navtitle");
 const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
@@ -501,7 +421,7 @@ let cur=null;
 function moveLens(v){const a=links.find(l=>l.dataset.view===v);if(!a)return;lens.style.width=a.offsetWidth+"px";lens.style.transform="translateX("+(a.offsetLeft-5)+"px)"}
 function title(v){const h=views[v].querySelector("h1");return h?h.textContent.replace(/^小小白·/,""):"小小白"}
 function show(){
-  const v=location.hash==="#vcp"?"vcp":location.hash==="#pai"?"pai":"app";
+  const v=location.hash==="#vcp"?"vcp":"app";
   const dx=cur==null?0:(order.indexOf(v)>order.indexOf(cur)?24:-24);
   for(const k in views)views[k].hidden=(k!==v);
   links.forEach(a=>a.dataset.view===v?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
