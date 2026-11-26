@@ -451,6 +451,14 @@ if(acts.length||sigs.length)h+='<section class="card"><h2>今日动态</h2><div 
 // 持仓
 const pos=P.positions||[];
 h+='<section class="card"><div class="head"><h2>持仓</h2><span class="muted small">'+pos.length+' 只</span></div>'+(pos.length?'<div class="lst">'+pos.map(p=>{const r=(p.last/p.entry-1)*100;return item(esc(p.name.slice(0,1)),COL[p.book],esc(p.name)+' <span class="muted small">'+esc(p.shares)+'股</span>','成本 '+(+p.entry).toFixed(2)+' · 现价 '+(+p.last).toFixed(2)+' · 止损 '+esc(p.stop)+' · 回落卖出线 '+esc(p.trail_line),pc(r,1),cls(r))}).join("")+'</div>':'<p class="empty">空仓。</p>')+'</section>';
+// 期望值排名（观察期）
+const EV=P.ev||{},EL=EV.latest,ES=EV.stats||{};
+if(EL){
+ const r=x=>'<div class="li"><span class="ic" style="background:'+(x.rank<=3?'var(--red)':'var(--orange)')+'">'+x.rank+'</span><div class="tx"><b>'+esc(x.name)+'</b><small>'+esc(x.state)+' · 同类状态 '+esc(x.n)+' 次、跑赢池子 '+esc(x.win20)+'% · 本股同类 '+esc(x.own_n)+' 次</small></div><span class="rt '+cls(x.ev20)+'">'+pc(+x.ev20)+'<br><small class="muted">5日 '+pc(+x.ev5)+'</small></span></div>';
+ const chk=[5,20].map(hh=>{const x=ES[hh];return x?'<div class="mini"><span>'+hh+' 日检验 · 已结算 '+x.n+' 天</span><b class="'+cls(x.top-x.pool)+'">'+pc(x.top-x.pool)+'</b><span>前10 '+pc(x.top)+' · 后10 '+pc(x.bottom)+' · 池子 '+pc(x.pool)+' · 前10跑赢池子 '+x.beat+'% 的天数</span></div>':'<div class="mini"><span>'+hh+' 日检验</span><b class="muted">等待中</b><span>满 '+hh+' 个交易日后开始结算</span></div>'}).join("");
+ h+='<section class="card"><div class="head"><h2>期望值排名</h2><span class="pill warn">观察期 · 不交易</span></div><p class="small muted">依据 '+esc(EL.asof)+' 收盘。找出池内股票历史上和现在“相同状态”（离200日线远近、近20日涨跌、量能）的所有时点，统计之后20个交易日相对池子平均的超额收益；样本少的向0收缩。数值是统计平均，不是预测。</p><div class="lst">'+(EL.top||[]).map(r).join("")+'</div><div class="seg2">'+chk+'</div>'+
+ '<details><summary>查看全部 '+(EL.all||[]).length+' 只排名</summary><div class="tw" style="margin-top:8px"><table><tr><th>名次</th><th>股票</th><th>20日期望</th><th>5日期望</th><th>样本</th><th>跑赢率</th><th style="text-align:left">当前状态</th></tr>'+(EL.all||[]).map(x=>'<tr><td>'+x.rank+'</td><td>'+esc(x.name)+'</td><td class="'+cls(x.ev20)+'">'+pc(+x.ev20)+'</td><td class="'+cls(x.ev5)+'">'+pc(+x.ev5)+'</td><td>'+esc(x.n)+'</td><td>'+esc(x.win20)+'%</td><td style="text-align:left">'+esc(x.state)+'</td></tr>').join("")+'</table></div></details></section>';
+}
 // 股票池
 const PL=P.pool||{},plist=PL.list||[],ph=(PL.history||[]).slice(-1)[0];
 if(plist.length||PL.note){
