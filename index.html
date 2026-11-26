@@ -312,6 +312,9 @@ html+='<div class="bar"><span>A股结算至 <b>'+mk.CN.last_date+'</b></span><sp
  '<span class="muted small">页面生成 '+esc(D.generated_at.replace("T"," ").slice(0,16))+' UTC</span></div>';
 if(stale>5) html+='<div class="note bad">账本已有 '+stale+' 天没有结算新交易日。可能是 Mac 没开机或网络故障，运行记录里有原因。</div>';
 if(!D.ledger.ok) html+='<div class="note bad">账本哈希链校验未通过：'+esc(D.ledger.problems.join("；"))+'</div>';
+{const ro=D.review_open!=null?D.review_open:(D.review||[]).filter(x=>!x.resolved).length,rr=D.review_resolved!=null?D.review_resolved:(D.review||[]).filter(x=>x.resolved).length;
+ if(ro) html+='<div class="note">待人工核对 '+ro+' 条：'+(D.review||[]).filter(x=>!x.resolved).map(x=>esc((D.names||{})[x.symbol]||x.symbol)+'（'+esc(x.date)+' '+esc(x.why||x.kind||'')+'）').join('；')+(rr?'<span class="muted small"> · 已解决 '+rr+' 条</span>':'')+'</div>';
+ else if(rr) html+='<p class="muted small">人工核对：无待处理 · 已解决 '+rr+' 条</p>';}
 if(D.frozen&&D.frozen.length) html+='<div class="note">有标的被冻结待核（疑似拆分或分红）：'+D.frozen.map(x=>esc(x.name)+"（"+esc(x.why)+"）").join("；")+'</div>';
 html+=D.accounts.map(card).join("");
 html+='<section class="card"><h2>运行记录</h2>'+(D.runs.length?'<div class="tw"><table><tr><th>时间(UTC)</th><th>状态</th><th>说明</th></tr>'+D.runs.slice().reverse().slice(0,15).map(r=>'<tr><td>'+esc(r.ts.replace("T"," ").slice(5,16))+'</td><td class="'+(r.status=="failed"?"bad":r.status=="warn"?"warn":"ok")+'">'+({ok:"成功",warn:"提示",failed:"失败",init:"建账",idle:"无新日"})[r.status]+'</td><td style="white-space:normal;text-align:left">'+esc([].concat(r.warnings||[],r.notes||[]).slice(0,3).join("；")||r.note||"")+'</td></tr>').join("")+'</table></div>':'<p class="muted">还没有运行记录。</p>')+'<p class="muted small">失败和警告原样保留，不会被覆盖。</p></section>';
@@ -349,7 +352,7 @@ const el=document.getElementById("vcp"),V=window.VCP;
 if(!V||!V.state){el.innerHTML='<h1>小小白·波动收缩突破</h1><div class="bar"><span class="pill warn">暂无数据</span><span>Mac 上的波动收缩突破账户还没有运行过，或数据文件尚未上传。</span></div>';}
 else{
 const s=V.state,nav=V.nav||[],last=nav[nav.length-1]||{},r=+last.ret||0,br=+last.bench_ret||0,dd=+last.dd||0,nv=last.nav?+last.nav:+s.cash;
-const runs=V.runs||[],lr=runs[runs.length-1],st={ok:"成功",idle:"非交易日",failed:"失败"};
+const runs=V.runs||[],lr=runs[runs.length-1],st={ok:"成功",idle:"非交易日",failed:"失败",verify:"待核验"};
 const T=V.tiers||{},L=T.list||[],C=T.count||{},pos=s.positions||[],orders=(s.plan&&s.plan.orders)||[];
 const sec=(title,body,sub)=>'<section class="card"><div class="head"><h2>'+title+'</h2>'+(sub?'<span class="muted small">'+sub+'</span>':'')+'</div>'+body+'</section>';
 const fold=(title,body)=>'<section class="card fold"><details><summary>'+title+'</summary><div class="fb">'+body+'</div></details></section>';
